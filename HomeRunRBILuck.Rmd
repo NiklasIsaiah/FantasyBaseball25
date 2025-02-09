@@ -1,0 +1,59 @@
+---
+title: "Home Run Luck"
+author: "Niklas Jarvinen"
+date: "2025-02-09"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+
+Homers <- read.csv('24Hrs.csv')
+```
+
+```{r}
+
+#Create column for how many RBI were awarded on each home run
+Homers$RBI <- Homers$post_bat_score - Homers$bat_score
+
+#Find the average amount of RBI on HR then create a variable for it to use later
+Average <- Homers %>% summarise(meanRBI = mean(RBI))
+AverageRBI <- Average$meanRBI
+AverageRBI
+
+#Average Homer was worth 1.59 RBI, let's look at each player now
+AveragePlayer <- Homers %>% group_by(player_name) %>% summarise(meanRBI = mean(RBI))
+
+#Round
+AveragePlayer$meanRBI <- round(AveragePlayer$meanRBI, 2)
+
+#Now let's prepare to compare RBI luck on Home Runs by player to league average
+#First we need to get each players HR total
+
+HRTotal <- Homers %>% group_by(player_name) %>% summarise(n())
+
+#Round Deserved RBI
+AverageRBI <- round(AverageRBI, 2)
+
+#Now let's multiply their HR by the average amount of RBI per HR
+HRTotal$DeservedRBI <- HRTotal$`n()` * AverageRBI
+
+#Put together both tables for comparison
+HRTotal <- HRTotal %>% inner_join(AveragePlayer, by = "player_name")
+
+#Multiply Mean RBI to get actual RBI on HR
+HRTotal$RBIonHR <- HRTotal$`n()` * HRTotal$meanRBI
+
+#Find RBI Luck
+HRTotal$Diff <- HRTotal$DeservedRBI - HRTotal$RBIonHR
+
+#Luckiest Hitters
+HRTotalHead <- HRTotal %>% arrange(Diff) %>% head(HRTotal,n=10)
+head(HRTotalHead,n=10)
+
+#Unluckiest Hitters
+HRTotalTail <- HRTotal %>% arrange(desc(Diff)) %>% head(HRTotal,n=10)
+tail(HRTotalTail,n=10)
+
+```
+
