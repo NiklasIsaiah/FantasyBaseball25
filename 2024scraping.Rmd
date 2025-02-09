@@ -1,0 +1,39 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-02-08"
+---
+```{r}
+#devtools::install_github(repo = "saberpowers/sabRmetrics")
+
+library(dplyr)
+library(sabRmetrics)
+```
+
+```{r}
+data_baseballsavant <- sabRmetrics::download_baseballsavant(
+  start_date = "2024-07-01",
+  end_date = "2024-07-01")
+```
+
+```{r}
+playernames <- twentyfourbattersfull %>% filter(events == 'double') %>% filter(batter_name == "Duran, Jarren")
+
+write.csv(playernames, 'test.csv')
+```
+
+```{r}
+twentyfourbatters <- download_baseballsavant(start_date ='2024-03-28', end_date = '2024-08-31')
+twentyfourbatterstwo <- download_baseballsavant(start_date ='2024-09-01', end_date = '2024-09-30')
+
+twentyfourbattersfull <- rbind(twentyfourbatters, twentyfourbatterstwo)
+```
+
+```{r}
+write.csv(twentyfourbattersfull,'SavantData2024.csv')
+```
+
+```{r}
+playernames <- twentyfourbattersfull %>% filter(events == 'double') %>% group_by(batter_name) %>% summarise(count = n())
+```
+

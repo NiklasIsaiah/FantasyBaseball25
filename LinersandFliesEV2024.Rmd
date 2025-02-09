@@ -1,0 +1,76 @@
+---
+title: "LinerFly"
+author: "NIJ"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+```
+
+Reading in the scraped Baseball Savant data from 2024, I will be analyzing how to get exit velocity and counts on line drives and fly balls only, since those are most important to a hitter. Grounders are usually more reliant on where you hit them (and can not indicate power) instead of how hard a ball is hit.
+```{r}
+LDFB <- read.csv('SavantData2024.csv')
+
+LDFB <- LDFB %>% filter(bb_type == 'fly_ball'| bb_type == 'line_drive')
+```
+
+Now that I have filtered the data using dplyr functions, I can see the count of line drives plus fly balls every hitter has and makes a list
+```{r}
+playernames <- LDFB %>% group_by(batter_name) %>% summarise(count = n())
+
+#Join together the count of line drives and fly balls to the player so we do our next step of limiting our leaderboard to qualifiers
+LDFB <- inner_join(LDFB, playernames)
+
+#Filter to players with at least 30 events, so we don't have noise in our leaderboard
+LDFB <- LDFB %>% filter(count >= 30)
+
+#Take out any misreads where there is no data collected and they would make our players average be NaN
+LDFB <- LDFB[!is.na(LDFB$launch_speed),]
+
+#Found the median by hitter
+playermedianLDFB <- LDFB %>% group_by(batter_name) %>% summarise(median(launch_speed, na.rm = TRUE))
+
+#find the mean by hitter
+playermeanLDFB <- LDFB %>% group_by(batter_name) %>% summarise(mean(launch_speed, na.rm = TRUE))
+
+#find the percentiles for each hitter, along with the quartiles
+tenthpercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedten = quantile(launch_speed, (0.1)))
+twentypercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedtwnety = quantile(launch_speed, (0.2)))
+thirtypercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedthirty = quantile(launch_speed, (0.3)))
+fourtypercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedforty = quantile(launch_speed, (0.4)))
+sixtypercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedsixty = quantile(launch_speed, (0.6)))
+seventypercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedseventy = quantile(launch_speed, (0.7)))
+eightypercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedeighty = quantile(launch_speed, (0.8)))
+ninetypercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedninety = quantile(launch_speed, (0.9)))
+ninetyninpercentile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedninetynine = quantile(launch_speed, (0.99)))
+maxev <- LDFB %>% group_by(batter_name) %>% summarise(maxev = max(launch_speed))
+firstquarttile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedfirstquartile = quantile(launch_speed, (0.25)))
+thirdquarttile <- LDFB %>% group_by(batter_name) %>% summarise(launch_speedthirdquartile = quantile(launch_speed, (0.75)))
+
+#join all of these measures together so we can have an Excel/csv document to sort through
+players <- playermeanLDFB %>%
+  inner_join(., tenthpercentile, by = "batter_name") %>%
+  inner_join(., twentypercentile, by = "batter_name") %>%
+  inner_join(., thirtypercentile, by = "batter_name") %>%
+  inner_join(., fourtypercentile, by = "batter_name") %>%
+  inner_join(., playermedianLDFB, by = "batter_name") %>%
+  inner_join(., sixtypercentile, by = "batter_name") %>%
+  inner_join(., seventypercentile, by = "batter_name") %>%
+  inner_join(., eightypercentile, by = "batter_name") %>%
+  inner_join(., ninetypercentile, by = "batter_name") %>%
+  inner_join(., ninetyninpercentile, by = "batter_name") %>%
+  inner_join(., maxev, by = "batter_name") %>%
+  inner_join(., firstquarttile, by = "batter_name") %>%
+  inner_join(., thirdquarttile, by = "batter_name")
+
+#add count back into table
+LDFBcount <- LDFB %>% group_by(batter_name) %>% filter(launch_speed > 0) %>% summarize(n())
+
+#combine the dataframes by player so that we can see each hitter's count of LD+FB
+players <- players %>% inner_join(LDFBcount, by = "batter_name")
+
+#write our csv, working directory set to put in my R notebook
+write.csv(players, "LDFBPer.csv")
+```
+
